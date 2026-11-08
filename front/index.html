@@ -1,0 +1,669 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CNV WEB</title>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="{% static 'logo-cnv-web-removebg-preview.png' %}" rel="icon">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="{% static 'supabase-config.js' %}"></script>
+  <style>
+    :root{
+      --bg:#F5F1E4;          /* bege do fundo */
+      --blue:#2A82BF;        /* azul dos textos */
+      --orange:#FF8B47;      /* laranja do destaque */
+      --yellow:#FFE168;      /* amarelo dos botões */
+      --text:#2b2b2b;
+      --muted:#5B7FA0;
+      --card:#ffffff;
+      --ring:#F2D668;
+      --radius:26px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family:'Montserrat', system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, 'Helvetica Neue', Arial, sans-serif;
+      background:var(--bg);
+      color:var(--text);
+      text-align: justify;
+    }
+    a{color:inherit;text-decoration:none}
+    img{max-width:100%;display:block}
+
+    /* ====== Header / Nav ====== */
+    header{
+      position:sticky; top:0; z-index:50; backdrop-filter:saturate(1.2) blur(3px);
+      background:color-mix(in oklab, var(--bg) 90%, #fff 10%);
+      border-bottom:1px solid #e9e4d6;
+    }
+    .container{max-width:1120px; margin:0 auto; padding:16px 24px}
+    .nav{display:flex; align-items:center; justify-content:space-between; gap:16px}
+    .brand{display:flex; align-items:center; gap:12px}
+    .brand img{width:52px; height:auto}
+    .brand .title{font-weight:700; font-size:28px; color:var(--blue); letter-spacing:.5px}
+
+    .menu{display:flex; align-items:center; gap:18px; flex-wrap:wrap}
+    .menu a{font-weight:600; color:var(--muted); position:relative; padding:8px 10px; border-radius:12px}
+    .menu a.active{color:#fff; background:var(--orange)}
+    .menu a:hover{color:var(--blue)}
+
+    /* ====== Sections ====== */
+    section{display:none;}
+    section.active{display:block}
+
+    /* ====== Home ====== */
+    .home{padding:32px 0 56px}
+    .hero{display:grid; grid-template-columns:1.05fr .95fr; gap:32px; align-items:center}
+    .hero h1{color:var(--blue); font-size:64px; line-height:1.05; margin:0 0 8px; font-weight:800}
+    .hero h1 .br{display:block}
+    .hero .lead{max-width:680px; color:var(--muted); font-weight:500; line-height:1.8; letter-spacing:.2px}
+    .cta{margin-top:28px; display:flex; align-items:center; gap:16px; flex-wrap:wrap}
+    .btn-primary{background:#fff; border:none; border-radius:999px; padding:18px 28px; font-weight:700; color:var(--blue); box-shadow:0 2px 0 rgba(0,0,0,.06), 0 10px 24px rgba(0,0,0,.06); cursor:pointer}
+    .btn-round{width:48px; height:48px; border-radius:999px; background:var(--yellow); border:3px solid #FFD955; display:grid; place-items:center; font-size:18px}
+    .hero-illust-wrap{position:relative}
+    .hero-illust{border-radius:50%; padding:18px; outline:10px solid var(--ring); outline-offset:-10px; background:#fff}
+
+    /* ====== Login ====== */
+    .login{padding:40px 0 64px}
+    .grid-2{display:grid; grid-template-columns:1fr 1fr; gap:48px}
+    .card{background:var(--card); border-radius:20px; padding:26px; box-shadow:0 10px 28px rgba(0,0,0,.05)}
+    .form h2{color:var(--blue); font-size:44px; margin:0 0 18px}
+    label{display:block; font-size:14px; letter-spacing:.4px; color:var(--muted); margin:10px 0 8px}
+    input[type="text"],input[type="password"],input[type="email"],textarea{width:100%; background:#fff; border:1px solid #eee; border-radius:999px; padding:16px 18px; outline:none; font-size:16px; box-shadow:inset 0 1px 0 rgba(0,0,0,.03)}
+    textarea{border-radius:16px}
+    .btn-yellow{background:var(--yellow); border:none; border-radius:10px; padding:14px 26px; font-weight:800; color:var(--blue); cursor:pointer}
+    .forgot{margin-top:26px; font-weight:600}
+
+    /* ====== Informativos ====== */
+    .informativos{padding:40px 0 64px}
+    .inf-grid{display:grid; grid-template-columns:1fr 1fr; gap:48px; align-items:start}
+    .circle-img{border-radius:50%; outline:10px solid var(--ring); outline-offset:-10px; overflow:hidden; width:min(420px,100%); height:min(420px,100%); background:#fff; margin:0 auto}
+    .inf-text{color:var(--muted); line-height:1.9}
+    .inf-text h3{color:var(--blue)}
+    .inf-block{background:#fff; border-radius:16px; padding:22px; box-shadow:0 6px 16px rgba(0,0,0,.05); margin-top:18px}
+
+    .chart-wrap{display:grid; grid-template-columns:1fr; gap:10px; justify-items:center; margin-top:18px}
+    .chart-legend{display:flex; gap:18px; flex-wrap:wrap; font-size:14px}
+    .legend-item{display:flex; align-items:center; gap:8px}
+    .legend-dot{width:12px; height:12px; border-radius:999px; background:#2A82BF}
+
+    /* ====== Espaço CNV ====== */
+    .espaco{padding:40px 0 64px}
+    .section-title{font-size:28px; color:var(--blue); font-weight:800; margin:6px 0 18px}
+    .books{display:grid; grid-template-columns:repeat(3, 1fr); gap:48px; align-items:start}
+    .book{width:100%; aspect-ratio:3/4.2; background:#fff; border:4px solid #0b2940; border-radius:6px; overflow:hidden; box-shadow:0 14px 30px rgba(0,0,0,.06)}
+    .media-box{height:340px; border:8px solid #000; border-radius:8px; background:#fff;}
+
+    /* ====== Feedbacks ====== */
+    .feedbacks{padding:40px 0 84px}
+    .fb-grid{display:grid; grid-template-columns:1fr 1fr; gap:48px}
+    .radio{display:flex; align-items:center; gap:12px; margin:10px 0}
+    .radio input{accent-color:var(--blue)}
+    .stars{display:flex; gap:14px; margin-top:12px}
+    .stars button{background:none; border:none; font-size:22px; cursor:pointer}
+    .stars button.active{filter:drop-shadow(0 10px 10px rgba(0,0,0,.08))}
+    .submit-area{margin-top:24px}
+
+    /* ====== Utility ====== */
+    .muted{color:var(--muted)}
+    .mt-16{margin-top:16px}
+    .mt-24{margin-top:24px}
+    .mt-32{margin-top:32px}
+    .mb-12{margin-bottom:12px}
+    .center{display:flex; justify-content:center; align-items:center}
+    .small{font-size:12px; color:#7b8fa3}
+
+    /* ====== Responsivo ====== */
+    @media (max-width: 980px){
+      .container{padding:16px}
+      .hero{grid-template-columns:1fr; text-align:left}
+      .hero h1{font-size:44px}
+      .grid-2, .fb-grid, .inf-grid, .books{grid-template-columns:1fr;}
+      .media-box{height:220px}
+      .menu{gap:10px}
+      .menu a{padding:8px 12px}
+    }
+    @media (max-width: 560px){
+      .hero h1{font-size:36px}
+      .btn-primary{width:100%; text-align:center}
+      .btn-round{display:none}
+      .brand .title{font-size:22px}
+    }
+
+    .stars button.active {
+       color: gold;
+  } 
+  </style>
+</head>
+<body>
+  <!-- ================= Header ================= -->
+  <header>
+    <div class="container nav">
+      <div class="brand">
+        <img src="{% static 'logo-cnv-web.jpg' %}" alt="CNV WEB logo" />
+        <div class="title">CNV WEB</div>
+      </div>
+      <nav class="menu">
+        <a href="#home" data-route="home" class="active">Home</a>
+        <a href="#login" data-route="login">Login</a>
+        <a href="#informativos" data-route="informativos">Informativos</a>
+        <a href="#espaco" data-route="espaco">Espaço CNV</a>
+        <a href="#feedbacks" data-route="feedbacks">Feedbacks</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- ================= Home ================= -->
+  <section id="home" class="home active">
+    <div class="container">
+      <div class="hero">
+        <div>
+          <h1>
+            COMUNICAÇÃO <span class="br"></span>
+            NÃO‑VIOLENTA
+          </h1>
+          <p class="lead">
+            Comunicação Não Violenta: o caminho para a harmonia. Este artigo dá sequência ao nosso estudo sobre comunicação eficaz, explorando os fundamentos e a prática da CNV para transformar relações e resolver conflitos com empatia, honestidade e respeito. A seguir, vamos responder três perguntas essenciais: como praticar a escuta ativa, como expressar necessidades e sentimentos, e como lidar com conflitos e críticas de forma construtiva.
+          </p>
+          <div class="cta">
+            <button class="btn-primary" data-route="informativos" id="btnSaibaMais">SAIBA MAIS SOBRE A CNV</button>
+            <div class="btn-round">➜</div>
+          </div>
+        </div>
+        <div class="hero-illust-wrap">
+          <div class="hero-illust">
+            <img src="{% static 'hero-bubbles.jpg' %}" alt="Ilustração pessoas com balões de fala" />
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= Login ================= -->
+  <section id="login" class="login">
+    <div class="container">
+      <div id="sessionCard" class="card" style="display:none; margin-bottom:24px;">
+        <h2 style="margin:0 0 10px;color:var(--blue);font-size:30px">Sessão ativa</h2>
+        <p class="muted" style="margin:0 0 18px">Você está logado com o e-mail:</p>
+        <p id="loggedEmail" style="font-weight:800;color:var(--blue);font-size:18px;margin:0 0 20px"></p>
+        <button id="btnSair" class="btn-yellow" type="button">Sair da conta</button>
+      </div>
+
+      <div id="authForms" class="grid-2">
+        <div class="form card">
+          <h2>Login</h2>
+          <label for="loginEmail">EMAIL</label>
+          <input id="loginEmail" type="email" placeholder="Seu email" autocomplete="email" />
+          <label for="loginSenha">SENHA</label>
+          <input id="loginSenha" type="password" placeholder="••••••" autocomplete="current-password" />
+          <div class="mt-24">
+            <button id="btnEntrar" class="btn-yellow" type="button">Entrar</button>
+          </div>
+          <div class="forgot">
+            <button id="btnRecuperar" type="button" style="background:none;border:0;padding:0;font:inherit;color:var(--blue);font-weight:700;cursor:pointer">Esqueceu sua senha?</button>
+          </div>
+        </div>
+
+        <div class="form card">
+          <h2>Cadastre-se</h2>
+          <label for="cadEmail">EMAIL</label>
+          <input id="cadEmail" type="email" placeholder="Seu email" autocomplete="email" />
+          <label for="cadSenha">SENHA</label>
+          <input id="cadSenha" type="password" placeholder="Crie uma senha" autocomplete="new-password" />
+          <div class="mt-24">
+            <button id="btnCadastrar" class="btn-yellow" type="button">Cadastrar</button>
+          </div>
+          <p class="small mt-16">A conta é criada diretamente no Supabase Auth.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= Informativos ================= -->
+  <section id="informativos" class="informativos">
+    <div class="container">
+      <div class="inf-grid">
+        <div>
+          <div class="circle-img">
+            <img src="{% static 'inf-pares-chat.jpg' %}" alt="Pares conversando (ilustração)" />
+          </div>
+          <div class="inf-text mt-24">
+            <h3>Conceitos‑chave da CNV</h3>
+            <p>
+              A Comunicação Não Violenta foi desenvolvida por Marshall Rosenberg na década de 1960 e se baseia em quatro pilares: <strong>Observação</strong> (descrever fatos sem julgamentos), <strong>Sentimentos</strong> (nomear o que sentimos), <strong>Necessidades</strong> (reconhecer o que está por trás dos sentimentos) e <strong>Pedidos</strong> (formular solicitações claras e específicas). Esses princípios criam conexões empáticas e relações mais honestas e compassivas.
+            </p>
+            <div class="inf-block">
+              <p class="mb-12"><strong>1) Observação:</strong> descrever objetivamente a situação sem avaliações pessoais. Ex.: em vez de “Você está sempre atrasado”, use “Percebi que você chegou 20 minutos depois do horário combinado”.</p>
+              <p class="mb-12"><strong>2) Sentimentos:</strong> identificar e expressar emoções de forma clara. Ex.: “Eu me sinto frustrado quando as coisas não acontecem conforme o planejado”.</p>
+              <p class="mb-12"><strong>3) Necessidades:</strong> compreender as razões por trás dos sentimentos (ex.: necessidade de organização e de cumprimento de horários).</p>
+              <p class="mb-12"><strong>4) Pedidos:</strong> fazer solicitações claras e específicas, formuladas positivamente. Ex.: “Você poderia me avisar quando estiver atrasado?”.</p>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="circle-img">
+            <img src="{% static 'inf-coracoes.jpg' %}" alt="Diálogo empático (ilustração)" />
+          </div>
+          <div class="inf-text mt-24">
+            <h3>Três perguntas essenciais</h3>
+            <p><strong>Como praticar a escuta ativa em conversas difíceis?</strong> Esteja presente, ouça sem interromper, faça perguntas abertas, resuma para confirmar e valide sentimentos e necessidades da outra pessoa antes de propor soluções. Depois, compartilhe seus próprios sentimentos e necessidades de forma assertiva e busque soluções em conjunto.</p>
+            <p><strong>Como expressar necessidades e sentimentos de forma clara e respeitosa?</strong> Use a estrutura “Eu” (eu me sinto… quando…), nomeie sentimentos, explicite necessidades e faça pedidos específicos e realizáveis.</p>
+            <p><strong>Como lidar com conflitos e críticas de forma construtiva?</strong> Mantenha a calma, foque no problema, use linguagem não julgadora, busque soluções que contemplem as necessidades de todos e seja aberto a feedbacks.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-32 inf-text">
+        <h3>Pesquisa na escola: o que as pessoas sabem sobre CNV?</h3>
+        <p>
+          Os dados revelaram que a maioria já ouviu falar em CNV, mas ainda possui pouco conhecimento aprofundado. Alunos (especialmente do ensino médio) associam a CNV a uma forma mais respeitosa de se comunicar e destacam sua importância para evitar conflitos e melhorar o diálogo. Muitos, porém, ainda confundem o conceito ou possuem visão limitada, apontando a necessidade de aprofundamento nas escolas.
+        </p>
+        <p>
+          Professores apresentaram visão mais crítica e completa, entendendo a CNV como ferramenta de construção de uma sociedade justa e humana e útil para resolver conflitos e desenvolver competências socioemocionais. Entre participantes mais velhos, a CNV foi reconhecida como meio de buscar clareza em conflitos sem perder o controle emocional.
+        </p>
+        <p>
+          Há interesse real no tema e abertura para aprender e aplicar a CNV no cotidiano. Recomenda-se a leitura de <em>Vivendo a Comunicação Não‑Violenta</em> (Marshall Rosenberg, 2012) e a promoção de rodas de conversa, oficinas e dinâmicas que desenvolvam essa competência desde cedo.
+        </p>
+
+
+        <!-- Texto completo (organizado em blocos para leitura) -->
+        <div class="inf-block">
+          <h4 style="color:var(--blue); margin:0 0 10px">Comunicação não violenta: o caminho para a harmonia</h4>
+          <p>Este é um artigo que dá sequência ao nosso estudo sobre comunicação eficaz, onde exploramos os fundamentos da comunicação não violenta. Agora, vamos mergulhar na prática dessa abordagem poderosa, que pode transformar nossas relações e melhorar nossa capacidade de resolver conflitos. Nossa intenção é esclarecer dúvidas sobre como aplicar a comunicação não violenta no dia a dia e ajudar a entender melhor seus princípios. Para isso, vamos responder três perguntas essenciais: Como praticar a escuta ativa em conversas difíceis? Como expressar necessidades e sentimentos de forma clara e respeitosa? Como lidar com conflitos e críticas de forma construtiva?</p>
+          <h5 style="margin:18px 0 8px">Conceitos‑chave da Comunicação Não Violenta</h5>
+          <p>A comunicação não violenta é um conceito desenvolvido pelo psicólogo americano Marshall Rosenberg na década de 1960. Em sua essência, a CNV se concentra na criação de conexões e no estabelecimento de relações baseadas na empatia, honestidade e compaixão. A CNV se baseia em 4 princípios fundamentais: Observação (fatos sem julgamentos), Sentimentos (expressar emoções de forma clara), Necessidades (compreender as razões subjacentes) e Pedidos (fazer pedidos claros e específicos).</p>
+          <p><strong>Observação:</strong> descreva objetivamente a situação, sem interpretações. Ex.: “Percebi que você chegou 20 minutos depois do horário combinado”. <strong>Sentimentos:</strong> identifique e nomeie emoções. Ex.: “Eu me sinto frustrado quando as coisas não acontecem conforme o planejado”. <strong>Necessidades:</strong> explicite a necessidade por trás do sentimento (ex.: organização). <strong>Pedidos:</strong> faça solicitações claras e positivas. Ex.: “Você poderia me avisar quando estiver atrasado?”.</p>
+          <h5 style="margin:18px 0 8px">1) Como praticar a escuta ativa em conversas difíceis?</h5>
+          <p>A escuta ativa exige presença, atenção e curiosidade genuína: ouvir sem interromper, fazer perguntas abertas, parafrasear para confirmar entendimento e validar sentimentos e necessidades. Depois, compartilhe seus próprios sentimentos e necessidades com clareza e busquem soluções conjuntas. É uma habilidade que se desenvolve com prática e paciência.</p>
+          <h5 style="margin:18px 0 8px">2) Como expressar necessidades e sentimentos de forma clara e respeitosa?</h5>
+          <p>Use a estrutura “Eu”: “Eu me senti [sentimento] quando [fato/observação] porque preciso de [necessidade]”. Termine com um pedido específico e factível. Essa estrutura evita acusações, reduz defesa e aumenta a colaboração.</p>
+          <h5 style="margin:18px 0 8px">3) Como lidar com conflitos e críticas de forma construtiva?</h5>
+          <p>Mantenha a calma, foque no problema (não na pessoa), use linguagem não‑julgadora, procure soluções que atendam às necessidades de ambos os lados e esteja aberto a feedbacks. Assim, além de resolver problemas, fortalecemos relações e criamos ambientes mais positivos.</p>
+          <p>Em síntese, a CNV vai além de uma técnica de fala: é uma proposta de transformação pessoal e social. A pesquisa indica interesse real no tema e reconhecimento de sua importância, especialmente no ambiente escolar. Por isso, vale incentivar práticas como rodas de conversa, oficinas e dinâmicas, além da leitura de obras como <em>Vivendo a Comunicação Não Violenta</em> (Marshall Rosenberg, 2012).</p>
+        </div>
+
+        <!-- Gráficos enviados (opcionais) -->
+        <div class="grid-2 mt-24">
+          <img src="{% static 'grafico-1.png' %}" alt="Gráfico escolar 1 (imagem)"/>
+          <img src="{% static 'grafico-2.png' %}" alt="Gráfico escolar 2 (imagem)"/>
+        </div>
+
+        <!-- ===== Resultados dinâmicos dos feedbacks ===== -->
+        <div class="inf-block">
+          <h4 style="color:var(--blue); margin:0 0 10px">Resultados da pesquisa sobre CNV</h4>
+          <p id="analyticsIntro" class="muted">Carregando os dados enviados pelos participantes...</p>
+
+          <div class="grid-2 mt-24" style="gap:20px">
+            <div class="card" style="padding:18px">
+              <h4 style="color:var(--blue);margin:0 0 12px">Entendimento sobre CNV</h4>
+              <canvas id="entendeuChart" height="220"></canvas>
+            </div>
+            <div class="card" style="padding:18px">
+              <h4 style="color:var(--blue);margin:0 0 12px">Avaliação da página</h4>
+              <canvas id="estrelasChart" height="220"></canvas>
+            </div>
+          </div>
+
+          <div class="card mt-24" style="padding:18px">
+            <h4 style="color:var(--blue);margin:0 0 12px">Perfil dos participantes</h4>
+            <canvas id="perfilChart" height="220"></canvas>
+          </div>
+
+          <div id="analyticsText" class="inf-block mt-24" style="background:#F5F1E4;box-shadow:none">
+            <p class="mb-12">Os resultados serão apresentados aqui assim que houver feedbacks cadastrados.</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= Espaço CNV ================= -->
+  <section id="espaco" class="espaco">
+    <div class="container">
+      <div>
+        <div class="section-title">Livros</div>
+        <div class="books mt-24">
+          <div class="book"><a href="https://loja.editoradialetica.com/humanidades/comunicacao-nao-violenta-a-chave-para-o-sucesso-nos-negocios-e-na-vida-pessoal?utm_source"><img src="{% static 'livro-dialetica.jpg' %}" alt="Comunicação Não Violenta - Dialética"/></a></div>
+          <div class="book"><a href="{% static 'Vivendo a Comunicação Não Violenta - Marshall Rosenberg.pdf' %}"><img src="{% static 'livro-vivendo-cnv.jpg' %}" alt="Vivendo a Comunicação Não Violenta"/></a></div>
+          <div class="book"><a href="{% static 'Comunicação Não Violenta.pdf' %}"><img src="{% static 'livro-cnv-rosenberg.jpg' %}" alt="Comunicação Não Violenta - Marshall B. Rosenberg"/></a> ></div>
+        </div>
+      </div>
+
+      <div class="mt-32">
+        <div class="section-title">Histórias</div>
+        <div class="grid-2" style="align-items:start">
+          <div class="inf-text">
+            <p>
+              “A CNV é essencial para aprendermos a nos comunicar com empatia e respeito, reduzindo conflitos e promovendo diálogo.” – depoimentos de alunos do ensino médio.
+            </p>
+            <p>
+              Professores relatam a CNV como uma ferramenta estratégica para a convivência escolar e formação humana: “É um caminho para um mundo menos desigual; mesmo com divergências, não precisa haver conflito”.
+            </p>
+            <p>
+              Recomendação: <em>Vivendo a Comunicação Não‑Violenta</em> (Marshall Rosenberg, 2012) como leitura-base para práticas em sala e projetos de convivência.
+            </p>
+          </div>
+          <div>
+            <video controls style="width: 50%; height: auto;">
+            <source src="{% static 'WhatsApp Video 2025-08-19 at 17.30.29.mp4' %}" type="video/mp4">
+                   Seu navegador não suporta vídeos HTML5.
+            </video>
+            
+            <div class="inf-text small mt-12">(Espaço reservado para vídeo/galeria de projetos CNV)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= Feedbacks ================= -->
+  <section id="feedbacks" class="feedbacks">
+    <div class="container">
+      <form id="formFeedback" class="fb-grid">
+        <div>
+          <div class="section-title">Sou… <span class="small">(obrigatório)</span></div>
+          <label class="radio"><input type="radio" name="perfil" value="Aluno" required> Aluno</label>
+          <label class="radio"><input type="radio" name="perfil" value="Professor"> Professor</label>
+          <label class="radio"><input type="radio" name="perfil" value="Funcionário"> Funcionário</label>
+
+          <div class="section-title mt-32">Se for aluno(a), qual a sua série?</div>
+          <label class="radio"><input type="radio" name="serie" value="1º Ano"> 1º Ano</label>
+          <label class="radio"><input type="radio" name="serie" value="2º Ano"> 2º Ano</label>
+          <label class="radio"><input type="radio" name="serie" value="3º Ano"> 3º Ano</label>
+          <label class="radio"><input type="radio" name="serie" value="Não sou aluno(a)"> Não sou aluno (a)</label>
+
+          <div class="section-title mt-32">Idade</div>
+          <label class="radio"><input type="radio" name="idade" value="Menos de 18"> Menos de 18</label>
+          <label class="radio"><input type="radio" name="idade" value="18-30"> 18–30</label>
+          <label class="radio"><input type="radio" name="idade" value="30-60"> 30–60</label>
+          <label class="radio"><input type="radio" name="idade" value="Mais de 60"> Mais de 60</label>
+        </div>
+
+        <div>
+          <div class="section-title">Após a visita, você entendeu sobre comunicação não‑violenta?</div>
+          <label class="radio"><input type="radio" name="entendeu" value="Sim" required> Sim</label>
+          <label class="radio"><input type="radio" name="entendeu" value="Não"> Não</label>
+
+          <div class="section-title mt-32">Fale o que entendeu sobre a comunicação não‑violenta</div>
+          <input type="text" name="comentario" placeholder="Digite aqui…" />
+
+          <div class="section-title mt-32">Dê seu feedback sobre esta página</div>
+          <div class="stars" id="stars">
+            <button type="button" data-v="1">★</button>
+            <button type="button" data-v="2">★</button>
+            <button type="button" data-v="3">★</button>
+            <button type="button" data-v="4">★</button>
+            <button type="button" data-v="5">★</button>
+          </div>
+          <input type="hidden" name="estrelas" id="estrelas" value="0" />
+
+          <div class="submit-area">
+            <button class="btn-yellow" type="submit">Enviar</button>
+          </div>
+        </div>
+      </form>
+      <div id="feedbackMsg" class="center mt-24 small" style="display:none"></div>
+    </div>
+  </section>
+
+<script>
+  // ================= CNV WEB + SUPABASE =================
+  const SUPABASE_URL = window.CNV_SUPABASE_URL || "https://ugwhptdzeoqunvcvpqve.supabase.co";
+  const SUPABASE_ANON_KEY = window.CNV_SUPABASE_ANON_KEY || "sb_publishable_xaGb5FDK_tOquAszAw9g6r7J0j3k1n";
+
+  let supabaseClient = null;
+  if (window.supabase && SUPABASE_URL.startsWith("http") && !SUPABASE_ANON_KEY.startsWith("COLE_AQUI")) {
+    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  }
+
+  const routes = ["home","login","informativos","espaco","feedbacks"];
+  const menuLinks = document.querySelectorAll('[data-route]');
+  const sections = Object.fromEntries(routes.map(r => [r, document.getElementById(r)]));
+
+  function go(route){
+    if(!routes.includes(route)) route = 'home';
+    for(const r of routes) sections[r].classList.toggle('active', r===route);
+    menuLinks.forEach(a=>a.classList.toggle('active', a.dataset.route===route));
+    history.replaceState({}, '', '#'+route);
+    window.scrollTo({top:0, behavior:'instant'});
+  }
+  menuLinks.forEach(a=>a.addEventListener('click', e=>{e.preventDefault(); go(a.dataset.route)}));
+  document.getElementById('btnSaibaMais')?.addEventListener('click', ()=>go('informativos'));
+  go(location.hash.replace('#','') || 'home');
+
+  function requireSupabase() {
+    if (!supabaseClient) {
+      alert('Configure SUPABASE_URL e SUPABASE_ANON_KEY no arquivo supabase-config.js.');
+      return false;
+    }
+    return true;
+  }
+
+  function setLoggedUser(user) {
+    const sessionCard = document.getElementById('sessionCard');
+    const authForms = document.getElementById('authForms');
+    const loggedEmail = document.getElementById('loggedEmail');
+    const loginLink = document.querySelector('[data-route="login"]');
+
+    if (user) {
+      sessionCard.style.display = 'block';
+      authForms.style.display = 'none';
+      loggedEmail.textContent = user.email || 'E-mail não informado';
+      if (loginLink) loginLink.textContent = `Logado: ${user.email}`;
+    } else {
+      sessionCard.style.display = 'none';
+      authForms.style.display = 'grid';
+      if (loginLink) loginLink.textContent = 'Login';
+    }
+  }
+
+  async function atualizarSessao() {
+    if (!supabaseClient) return;
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    setLoggedUser(session?.user || null);
+
+    supabaseClient.auth.onAuthStateChange((_event, newSession) => {
+      setLoggedUser(newSession?.user || null);
+      if (newSession?.user) carregarAnalytics();
+    });
+  }
+
+  document.getElementById('btnCadastrar')?.addEventListener('click', async () => {
+    if (!requireSupabase()) return;
+    const email = document.getElementById('cadEmail').value.trim();
+    const senha = document.getElementById('cadSenha').value;
+    if (!email || !senha) return alert('Preencha email e senha.');
+    if (senha.length < 6) return alert('A senha precisa ter pelo menos 6 caracteres.');
+
+    const { data, error } = await supabaseClient.auth.signUp({ email, password: senha });
+    if (error) return alert(`Erro no cadastro: ${error.message}`);
+
+    if (data.session) {
+      alert('Cadastro realizado e login efetuado com sucesso!');
+      setLoggedUser(data.user);
+      go('informativos');
+      carregarAnalytics();
+    } else {
+      alert('Cadastro realizado! Verifique seu e-mail para confirmar a conta.');
+    }
+  });
+
+  document.getElementById('btnEntrar')?.addEventListener('click', async () => {
+    if (!requireSupabase()) return;
+    const email = document.getElementById('loginEmail').value.trim();
+    const senha = document.getElementById('loginSenha').value;
+    if (!email || !senha) return alert('Preencha email e senha.');
+
+    const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password: senha });
+    if (error) return alert(`Erro no login: ${error.message}`);
+
+    setLoggedUser(data.user);
+    alert('Login realizado com sucesso!');
+    go('login');
+    carregarAnalytics();
+  });
+
+  document.getElementById('btnSair')?.addEventListener('click', async () => {
+    if (!requireSupabase()) return;
+    const { error } = await supabaseClient.auth.signOut();
+    if (error) return alert(`Erro ao sair: ${error.message}`);
+    setLoggedUser(null);
+    alert('Você saiu da conta.');
+  });
+
+  document.getElementById('btnRecuperar')?.addEventListener('click', async () => {
+    if (!requireSupabase()) return;
+    const email = document.getElementById('loginEmail').value.trim();
+    if (!email) return alert('Informe seu e-mail no campo de login.');
+    const redirect = `${window.location.origin}${window.location.pathname}#login`;
+    const { error } = await supabaseClient.auth.resetPasswordForEmail(email, { redirectTo: redirect });
+    if (error) return alert(`Erro: ${error.message}`);
+    alert('Se o e-mail existir, enviaremos as instruções para redefinir a senha.');
+  });
+
+  // ================= Feedback =================
+  const stars = document.getElementById('stars');
+  const estrelas = document.getElementById('estrelas');
+
+  stars?.querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const v = Number(btn.dataset.v);
+      estrelas.value = v;
+      stars.querySelectorAll('button').forEach((b, i) => b.classList.toggle('active', i < v));
+    });
+  });
+
+  document.getElementById('formFeedback')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!requireSupabase()) return;
+
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (!session) {
+      alert('Entre na sua conta antes de enviar o feedback.');
+      go('login');
+      return;
+    }
+
+    const formData = new FormData(e.target);
+    const data = Object.fromEntries(formData);
+    if (Number(data.estrelas) === 0) return alert('Escolha uma avaliação em estrelas.');
+
+    const payload = {
+      usuario_id: session.user.id,
+      perfil: data.perfil,
+      serie: data.serie || null,
+      idade: data.idade,
+      entendeu: data.entendeu === 'Sim',
+      comentario: data.comentario || null,
+      estrelas: Number(data.estrelas)
+    };
+
+    const { error } = await supabaseClient.from('feedbacks').insert(payload);
+    if (error) return alert(`Não foi possível registrar o feedback: ${error.message}`);
+
+    const msg = document.getElementById('feedbackMsg');
+    msg.textContent = 'Obrigado! Seu feedback foi registrado.';
+    msg.style.display = 'flex';
+    e.target.reset();
+    stars.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+    estrelas.value = '0';
+    await carregarAnalytics();
+    go('informativos');
+  });
+
+  // ================= Analytics =================
+  let chartEntendeu, chartEstrelas, chartPerfil;
+
+  function destruirChart(chart) {
+    if (chart) chart.destroy();
+  }
+
+  function criarChart(canvasId, config) {
+    const el = document.getElementById(canvasId);
+    if (!el || !window.Chart) return null;
+    return new Chart(el.getContext('2d'), config);
+  }
+
+  function percentual(v, total) {
+    return total ? Math.round((v / total) * 100) : 0;
+  }
+
+  function montarTexto(a) {
+    const total = Number(a.total || 0);
+    const sim = Number(a.entendeu_sim || 0);
+    const nao = Number(a.entendeu_nao || 0);
+    const media = Number(a.media_estrelas || 0).toFixed(1);
+    const melhor = Object.entries(a.perfil || {}).sort((x,y)=>y[1]-x[1])[0];
+    const perfilTexto = melhor ? `${melhor[0]} representa ${percentual(melhor[1], total)}% dos participantes` : 'a distribuição por perfil ainda não está disponível';
+
+    if (!total) {
+      return '<p class="mb-12">Ainda não existem feedbacks suficientes para gerar uma análise.</p>';
+    }
+
+    return `
+      <p class="mb-12"><strong>Participação:</strong> foram registrados <strong>${total}</strong> feedbacks.</p>
+      <p class="mb-12"><strong>Compreensão:</strong> ${sim} pessoas (${percentual(sim,total)}%) informaram que entenderam o conteúdo sobre Comunicação Não Violenta, enquanto ${nao} (${percentual(nao,total)}%) responderam que não entenderam.</p>
+      <p class="mb-12"><strong>Avaliação:</strong> a página recebeu média de <strong>${media}/5</strong> estrelas.</p>
+      <p class="mb-12"><strong>Perfil:</strong> ${perfilTexto}.</p>
+      <p>Esses resultados permitem avaliar o alcance da explicação sobre CNV e identificar pontos que podem ser aprimorados na experiência dos visitantes.</p>
+    `;
+  }
+
+  async function carregarAnalytics() {
+    if (!supabaseClient) return;
+    const intro = document.getElementById('analyticsIntro');
+    const text = document.getElementById('analyticsText');
+
+    const { data, error } = await supabaseClient.rpc('get_feedback_analytics');
+    if (error) {
+      console.error(error);
+      intro.textContent = 'Não foi possível carregar os resultados. Verifique as políticas e a função do Supabase.';
+      return;
+    }
+
+    const a = data || {};
+    const total = Number(a.total || 0);
+    intro.textContent = total
+      ? `Análise atualizada com base em ${total} feedback(s) enviados pelo projeto.`
+      : 'Ainda não há feedbacks cadastrados.';
+
+    text.innerHTML = montarTexto(a);
+
+    destruirChart(chartEntendeu);
+    destruirChart(chartEstrelas);
+    destruirChart(chartPerfil);
+
+    chartEntendeu = criarChart('entendeuChart', {
+      type:'doughnut',
+      data:{ labels:['Entenderam','Não entenderam'], datasets:[{ data:[Number(a.entendeu_sim||0),Number(a.entendeu_nao||0)], backgroundColor:['#2A82BF','#FF8B47'] }]},
+      options:{ responsive:true, plugins:{ legend:{ position:'bottom' }}}
+    });
+
+    chartEstrelas = criarChart('estrelasChart', {
+      type:'bar',
+      data:{ labels:['1★','2★','3★','4★','5★'], datasets:[{ label:'Avaliações', data:[...(a.estrelas||[0,0,0,0,0])], backgroundColor:'#2A82BF' }]},
+      options:{ responsive:true, scales:{ y:{ beginAtZero:true, ticks:{ precision:0 }}}}
+    });
+
+    const perfis = a.perfil || {};
+    chartPerfil = criarChart('perfilChart', {
+      type:'bar',
+      data:{ labels:Object.keys(perfis), datasets:[{ label:'Participantes', data:Object.values(perfis), backgroundColor:'#FF8B47' }]},
+      options:{ responsive:true, scales:{ y:{ beginAtZero:true, ticks:{ precision:0 }}}}
+    });
+  }
+
+  atualizarSessao();
+  carregarAnalytics();
+</script>
+
+<script src="{%static 'app.js'%}"></script>
+
+</body>
+</html>
